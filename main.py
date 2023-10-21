@@ -1,3 +1,4 @@
+import ai
 import images
 import math
 import pygame
@@ -57,27 +58,16 @@ if __name__ == '__main__':
     right_door_rect = pygame.Rect(SCREEN_X - 262 - 18, 148, 262, 538)
     run_back_rect = pygame.Rect(10, 682, 998, 80)
 
-    bonnie_ai = 20
-    chica_ai = 20
-    bonnie_location = 'mid'
-    chica_location = 'mid'
-    bonnie_random = 0
-    chica_random = 0
+    bonnie = ai.Animatronic('bonnie', 'mid', 20, random.randint(2, 5), 'left')
+    chica = ai.Animatronic('chica', 'mid', 20, random.randint(3, 5), 'right')
+
     second_event = pygame.USEREVENT + 2
     listening = ''
-    left_door_shut = False
-    right_door_shut = False
+    door_shut = ''
     retreating = ''
-    bonnie_move = False
-    chica_move = False
-    bonnie_seconds_at_door = 0
-    chica_seconds_at_door = 0
-    bonnie_force_move = False
-    chica_force_move = False
+    viewing_hall = ''
+
     run_back_debounce = False
-    cancel_movement = False
-    viewing_left_hall = False
-    viewing_right_hall = False
     game_over = False
     cleared = False
     night = 1
@@ -87,47 +77,13 @@ if __name__ == '__main__':
     pygame.time.set_timer(second_event, 1000)
     second_intervals = 0
 
-    bonnie_force_move_hour = random.randint(2, 5)
-    chica_force_move_hour = random.randint(3, 5)
-
     while running:
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == second_event:
                 second_intervals += 1
-                if second_intervals % 5 == 0 and not cancel_movement:
-                    if random.randint(1, 20) <= bonnie_ai and not left_door_shut and listening != 'left':
-                        bonnie_move = True
-                    if random.randint(1, 20) <= chica_ai and not right_door_shut and listening != 'right':
-                        chica_move = True
-                if second_intervals % 10 == 0:
-                    if bonnie_move:
-                        if bonnie_location == 'left_hall_near' and listening != 'left':
-                            bonnie_location = 'left_hall_far'
-                            bonnie_move = False
-                    if chica_move:
-                        if chica_location == 'right_hall_near' and listening != 'right':
-                            chica_location = 'right_hall_far'
-                            chica_move = False
-                # clearing cannot occur if movement is cancelled (you just brought them to near hall)
-                if second_intervals % 3 == 0 and not cancel_movement:
-                    if bonnie_location == 'left_hall_near' and left_door_shut:
-                        bonnie_location = 'left'
-                        # clearing will cancel bonnie and chica until door opened again
-                        cancel_movement = True
-                        bonnie_move = False
-                    if chica_location == 'right_hall_near' and right_door_shut:
-                        chica_location = 'right'
-                        # clearing will cancel bonnie and chica until door opened again
-                        cancel_movement = True
-                        chica_move = False
-                if bonnie_location == 'left_hall_near':
-                    bonnie_seconds_at_door += 1
-                if chica_location == 'right_hall_near':
-                    chica_seconds_at_door += 1
-                bonnie_random = random.randint(1, 2)
-                chica_random = random.randint(1, 2)
-
+                bonnie.interval_update(second_intervals, door_shut, listening)
+                chica.interval_update(second_intervals, door_shut, listening)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if screen.name == 'room':
                     if left_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
@@ -136,41 +92,40 @@ if __name__ == '__main__':
                     elif right_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == screen.frames - 1:
                         screen = images.screens['run_right_door']
                         animation_frame = 0
-            elif event.type == hour_event:
+            if event.type == hour_event:
                 hour += 1
                 if night == 1:
                     if hour == 2:
-                        bonnie_ai += 1
-                        chica_ai += 1
+                        bonnie.ai += 1
+                        chica.ai += 1
                     elif hour == 3:
-                        bonnie_ai += 2
-                        chica_ai += 1
+                        bonnie.ai += 2
+                        chica.ai += 1
                 elif night == 2:
                     if hour == 3:
-                        bonnie_ai += 2
-                        chica_ai += 2
+                        bonnie.ai += 2
+                        chica.ai += 2
                 elif night == 3:
                     if hour == 3:
-                        bonnie_ai += 3
-                        chica_ai += 3
+                        bonnie.ai += 3
+                        chica.ai += 3
                 elif night == 4:
                     if hour == 3:
-                        bonnie_ai += 2
-                        chica_ai += 2
+                        bonnie.ai += 2
+                        chica.ai += 2
                 elif night == 6:
                     if hour == 4:
-                        bonnie_ai -= 12
-                        chica_ai -= 12
+                        bonnie.ai -= 12
+                        chica.ai -= 12
                 if 2 <= night <= 4:
-                    if hour == bonnie_force_move_hour:
-                        bonnie_force_move = True
-                    if hour == chica_force_move_hour:
-                        chica_force_move = True
+                    if hour == bonnie.force_move_hour:
+                        bonnie.force_move = True
+                    if hour == chica.force_move_hour:
+                        chica.force_move = True
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_j:
                     pygame.event.post(pygame.event.Event(hour_event))
-
-            elif event.type == pygame.QUIT:
+            if event.type == pygame.QUIT:
                 running = False
 
         if hour == 6:
@@ -178,8 +133,7 @@ if __name__ == '__main__':
             running = False
 
         listening = ''
-        viewing_left_hall = False
-        viewing_right_hall = False
+        viewing_hall = ''
 
         if retreating == '':
             retreat_frame = 0
@@ -264,23 +218,23 @@ if __name__ == '__main__':
                     else:
                         animation_frame += 0.5
                 else:
-                    left_door_shut = True
-                    if bonnie_location == 'left_hall_far':
-                        bonnie_location = 'left_hall_near'
+                    door_shut = 'left'
+                    if bonnie.location == 'hall_far':
+                        bonnie.location = 'hall_near'
                         # bringing them closer by closing the door cancels bonnie and chica until opened again
-                        cancel_movement = True
-                        bonnie_move = False
+                        ai.Animatronic.cancel_movement = True
+                        bonnie.will_move = False
             elif animation_frame > 2:
-                left_door_shut = False
-                cancel_movement = False
+                door_shut = ''
+                ai.Animatronic.cancel_movement = False
                 animation_frame -= 0.5
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
                 animation_frame = 1
-                viewing_left_hall = True
-                if bonnie_location == 'left_hall_far':
-                    bonnie_location = 'mid'
+                viewing_hall = 'left'
+                if bonnie.location == 'hall_far':
+                    bonnie.location = 'mid'
                     retreating = 'bonnie'
-                elif bonnie_location == 'left_hall_near':
+                elif bonnie.location == 'hall_near':
                     screen = images.screens['jumpscare_bonnie_hall']
                     animation_frame = 0
             elif run_back_rect.collidepoint(pygame.mouse.get_pos()):
@@ -300,23 +254,23 @@ if __name__ == '__main__':
                     else:
                         animation_frame += 0.5
                 else:
-                    right_door_shut = True
-                    if chica_location == 'right_hall_far':
-                        chica_location = 'right_hall_near'
+                    door_shut = 'right'
+                    if chica.location == 'hall_far':
+                        chica.location = 'hall_near'
                         # bringing them closer by closing the door cancels bonnie and chica until opened again
-                        cancel_movement = True
-                        chica_move = False
+                        ai.Animatronic.cancel_movement = True
+                        chica.will_move = False
             elif animation_frame > 2:
-                right_door_shut = False
-                cancel_movement = False
+                door_shut = ''
+                ai.Animatronic.cancel_movement = False
                 animation_frame -= 0.5
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
                 animation_frame = 1
-                viewing_right_hall = True
-                if chica_location == 'right_hall_far':
-                    chica_location = 'mid'
+                viewing_hall = 'right'
+                if chica.location == 'hall_far':
+                    chica.location = 'mid'
                     retreating = 'chica'
-                elif chica_location == 'right_hall_near':
+                elif chica.location == 'hall_near':
                     screen = images.screens['jumpscare_chica_hall']
                     animation_frame = 0
             elif run_back_rect.collidepoint(pygame.mouse.get_pos()):
@@ -386,63 +340,19 @@ if __name__ == '__main__':
                 screen = images.screens['room']
                 animation_frame = 4
 
-        if bonnie_location != 'left_hall_far' and bonnie_location != 'left_hall_near':
-            bonnie_seconds_at_door = 0
-        if bonnie_seconds_at_door > 20 - night:
+        if bonnie.update(screen, night):
             room_jumpscare = 'bonnie'
-
-        if bonnie_move:
-            if bonnie_location == 'mid':
-                bonnie_location = 'left'
-                bonnie_move = False
-            elif bonnie_location == 'left':
-                if bonnie_random == 1:
-                    # if bonnie's waiting to move into left hall but flashlight is on, he will move right when it's off
-                    if not viewing_left_hall:
-                        bonnie_location = 'left_hall_far'
-                        bonnie_move = False
-                else:
-                    bonnie_location = 'mid'
-                    bonnie_move = False
-            elif bonnie_location == 'left_hall_far':
-                bonnie_location = 'left_hall_near'
-                bonnie_move = False
-            
-        if chica_location != 'right_hall_far' and chica_location != 'right_hall_near':
-            chica_seconds_at_door = 0
-        if chica_seconds_at_door > 20 - night:
+        if chica.update(screen, night):
             room_jumpscare = 'chica'
-            
-        if chica_move:
-            if chica_location == 'mid' or chica_location == 'kitchen':
-                chica_location = 'right'
-                chica_move = False
-            elif chica_location == 'right':
-                if chica_random == 1:
-                    # if chica's waiting to move into right hall but flashlight is on, she will move right when it's off
-                    if not viewing_right_hall:
-                        chica_location = 'right_hall_far'
-                        chica_move = False
-                else:
-                    chica_location = 'kitchen'
-                    chica_move = False
-            elif chica_location == 'right_hall_far':
-                chica_location = 'right_hall_near'
-                chica_move = False
 
-        # force move
-        if bonnie_force_move and screen.name == 'room':
-            bonnie_location = 'left_hall_near'
-            bonnie_force_move = False
-        if chica_force_move and screen.name == 'room':
-            chica_location = 'right_hall_near'
-            chica_force_move = False
+        bonnie.move(viewing_hall)
+        chica.move(viewing_hall)
 
         # we increment frames by 0.5 to get that 30 fps animation FNaF 4 seems to have, so floor all the frame values
         window.blit(screen.images[math.floor(animation_frame)], (screen.x, screen.y))
-        if retreating == 'bonnie' and viewing_left_hall:
+        if retreating == 'bonnie' and viewing_hall == 'left':
             window.blit(images.screens['retreating_bonnie'].images[math.floor(retreat_frame)], (0, 0))
-        elif retreating == 'chica' and viewing_right_hall:
+        elif retreating == 'chica' and viewing_hall == 'right':
             window.blit(images.screens['retreating_chica'].images[math.floor(retreat_frame)], (0, 0))
         # time
         if hour == 0:
@@ -451,9 +361,10 @@ if __name__ == '__main__':
         else:
             window.blit(hour_number.images[hour - 1], (hour_number.x + num_width, hour_number.y))
         window.blit(hour_number.images[hour_number.frames - 1], (958, 32))
-        print(f'Bonnie location: {bonnie_location}')
-        print(f'Chica location: {chica_location}')
+        print(f'Bonnie location: {bonnie.location}')
+        print(f'Chica location: {chica.location}')
         print(f'Room jumpscare: {room_jumpscare}')
+        print(bonnie.seconds_at_door)
         pygame.display.flip()
         dt = clock.tick(60)
     pygame.quit()

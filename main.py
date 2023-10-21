@@ -66,6 +66,8 @@ if __name__ == '__main__':
     door_shut = ''
     retreating = ''
     viewing_hall = ''
+    viewing_bed = False
+    random_bed_view = random.randint(1, 100)
 
     run_back_debounce = False
     game_over = False
@@ -315,8 +317,22 @@ if __name__ == '__main__':
                 screen = images.screens['bed']
                 animation_frame = 22
         elif screen.name == 'bed':
+            if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                viewing_bed = True
+                if random_bed_view == 1:
+                    animation_frame = 19
+                elif random_bed_view == 2:
+                    animation_frame = 20
+                elif random_bed_view == 3:
+                    animation_frame = 21
+                else:
+                    animation_frame = 18
+            else:
+                viewing_bed = False
+                random_bed_view = random.randint(1, 100)
+                animation_frame = 22
             if run_back_rect.collidepoint(pygame.mouse.get_pos()) or ai.Animatronic.force_turn:
-                if not run_back_debounce or ai.Animatronic.force_turn:
+                if not run_back_debounce and not viewing_bed or ai.Animatronic.force_turn:
                     screen = images.screens['leave_bed']
                     animation_frame = 0
                     run_back_debounce = True
@@ -366,7 +382,7 @@ if __name__ == '__main__':
         print(f'Bonnie location: {bonnie.location}')
         print(f'Chica location: {chica.location}')
         print(f'Room jumpscare: {room_jumpscare}')
-        print(bonnie.seconds_at_door)
+        print(random_bed_view)
         pygame.display.flip()
         dt = clock.tick(60)
     pygame.quit()

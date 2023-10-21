@@ -3,6 +3,7 @@ import random
 
 class Animatronic:
     cancel_movement = False
+    force_turn = False
 
     def __init__(self, name, location, ai, force_move_hour=0, side=''):
         self.name = name
@@ -15,7 +16,7 @@ class Animatronic:
         self.force_move = False
         self.force_move_hour = force_move_hour
 
-    def interval_update(self, second_intervals, door_shut, listening):
+    def interval_update(self, second_intervals, door_shut, listening, room_jumpscare):
         if self.name == 'bonnie' or self.name == 'chica':
             self.random = random.randint(1, 2)
             if second_intervals % 5 == 0 and not Animatronic.cancel_movement:
@@ -35,6 +36,8 @@ class Animatronic:
                     Animatronic.cancel_movement = True
             if self.location == 'hall_near':
                 self.seconds_at_door += 1
+            if second_intervals % 4 == 0 and room_jumpscare == self.name:
+                Animatronic.force_turn = True
 
     def update(self, screen, night):
         if self.name == 'bonnie' or self.name == 'chica':

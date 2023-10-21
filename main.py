@@ -82,8 +82,8 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == second_event:
                 second_intervals += 1
-                bonnie.interval_update(second_intervals, door_shut, listening)
-                chica.interval_update(second_intervals, door_shut, listening)
+                bonnie.interval_update(second_intervals, door_shut, listening, room_jumpscare)
+                chica.interval_update(second_intervals, door_shut, listening, room_jumpscare)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if screen.name == 'room':
                     if left_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
@@ -123,8 +123,10 @@ if __name__ == '__main__':
                     if hour == chica.force_move_hour:
                         chica.force_move = True
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_j:
+                if event.key == pygame.K_t:
                     pygame.event.post(pygame.event.Event(hour_event))
+                elif event.key == pygame.K_j:
+                    room_jumpscare = 'bonnie'
             if event.type == pygame.QUIT:
                 running = False
 
@@ -313,8 +315,8 @@ if __name__ == '__main__':
                 screen = images.screens['bed']
                 animation_frame = 22
         elif screen.name == 'bed':
-            if run_back_rect.collidepoint(pygame.mouse.get_pos()):
-                if not run_back_debounce:
+            if run_back_rect.collidepoint(pygame.mouse.get_pos()) or ai.Animatronic.force_turn:
+                if not run_back_debounce or ai.Animatronic.force_turn:
                     screen = images.screens['leave_bed']
                     animation_frame = 0
                     run_back_debounce = True

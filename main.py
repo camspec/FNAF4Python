@@ -4,7 +4,6 @@ import math
 import pygame
 import random
 
-
 # FNaF 4 Remake by me
 # All images, audio, and characters used in this project are owned by Scott Cawthon.
 
@@ -58,8 +57,8 @@ if __name__ == '__main__':
     right_door_rect = pygame.Rect(SCREEN_X - 262 - 18, 148, 262, 538)
     run_back_rect = pygame.Rect(10, 682, 998, 80)
 
-    bonnie = ai.Animatronic('bonnie', 'mid', 20, random.randint(2, 5), 'left')
-    chica = ai.Animatronic('chica', 'mid', 20, random.randint(3, 5), 'right')
+    bonnie = ai.Animatronic('bonnie', 20, 'mid', random.randint(2, 5), 'left')
+    chica = ai.Animatronic('chica', 20, 'mid', random.randint(3, 5), 'right')
 
     second_event = pygame.USEREVENT + 2
     listening = ''
@@ -73,7 +72,6 @@ if __name__ == '__main__':
     game_over = False
     cleared = False
     night = 1
-    room_jumpscare = ''
 
     pygame.time.set_timer(hour_event, 60000)
     pygame.time.set_timer(second_event, 1000)
@@ -84,8 +82,8 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == second_event:
                 second_intervals += 1
-                bonnie.interval_update(second_intervals, door_shut, listening, room_jumpscare)
-                chica.interval_update(second_intervals, door_shut, listening, room_jumpscare)
+                bonnie.interval_update(second_intervals, door_shut, listening, screen)
+                chica.interval_update(second_intervals, door_shut, listening, screen)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if screen.name == 'room':
                     if left_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
@@ -128,7 +126,7 @@ if __name__ == '__main__':
                 if event.key == pygame.K_t:
                     pygame.event.post(pygame.event.Event(hour_event))
                 elif event.key == pygame.K_j:
-                    room_jumpscare = 'bonnie'
+                    bonnie.room_jumpscare = True
             if event.type == pygame.QUIT:
                 running = False
 
@@ -342,11 +340,13 @@ if __name__ == '__main__':
             if animation_frame < screen.frames - 1:
                 animation_frame += 0.5
             else:
-                if room_jumpscare == 'bonnie':
-                    screen = images.screens['jumpscare_bonnie_room']
-                    animation_frame = 0
-                elif room_jumpscare == 'chica':
+                # priority: chica, bonnie, freddy bed, freddy not flashlight, foxy force
+                # when freddy counter >= 80, timer of 50 + random(0 to 49) counts down until 1, then jumpscare happens
+                if chica.room_jumpscare:
                     screen = images.screens['jumpscare_chica_room']
+                    animation_frame = 0
+                elif bonnie.room_jumpscare:
+                    screen = images.screens['jumpscare_bonnie_room']
                     animation_frame = 0
                 else:
                     screen = images.screens['start_room_bed']
@@ -358,10 +358,8 @@ if __name__ == '__main__':
                 screen = images.screens['room']
                 animation_frame = 4
 
-        if bonnie.update(screen, night):
-            room_jumpscare = 'bonnie'
-        if chica.update(screen, night):
-            room_jumpscare = 'chica'
+        bonnie.update(screen, night)
+        chica.update(screen, night)
 
         bonnie.move(viewing_hall)
         chica.move(viewing_hall)
@@ -381,8 +379,8 @@ if __name__ == '__main__':
         window.blit(hour_number.images[hour_number.frames - 1], (958, 32))
         print(f'Bonnie location: {bonnie.location}')
         print(f'Chica location: {chica.location}')
-        print(f'Room jumpscare: {room_jumpscare}')
-        print(random_bed_view)
+        print(bonnie.room_jumpscare)
+        print(chica.room_jumpscare)
         pygame.display.flip()
         dt = clock.tick(60)
     pygame.quit()

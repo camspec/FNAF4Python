@@ -5,9 +5,9 @@ class Animatronic:
     cancel_movement = False
     force_turn = False
 
-    def __init__(self, name, ai, location='', force_move_hour=0, side='', progress=0):
+    def __init__(self, name, location='', force_move_hour=0, side='', progress=0):
         self.name = name
-        self.ai = ai
+        self.ai = 0
         self.location = location
         self.force_move_hour = force_move_hour
         self.side = side

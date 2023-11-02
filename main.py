@@ -1,11 +1,52 @@
 import ai
 import images
+import json
 import math
 import pygame
 import random
 
 # FNaF 4 Remake by me
 # All images, audio, and characters used in this project are owned by Scott Cawthon.
+
+
+def create_default_config(config_dict):
+    config_file = open('config.json', 'w')
+    json.dump(config_dict, config_file, indent=4)
+    config_file.close()
+    print('Created config.json. Wrote default config.')
+
+
+def load_config(config_dict):
+    # ensure json exists
+    try:
+        json_string = read_config()
+    except FileNotFoundError:
+        print('Could not find config.json. Creating new file...')
+        create_default_config(config_dict)
+        json_string = read_config()
+    # then ensure json is valid
+    try:
+        return json.loads(json_string)
+    except json.decoder.JSONDecodeError:
+        print('JSON invalid. Rewriting file...')
+        create_default_config(config_dict)
+        json_string = read_config()
+        return json.loads(json_string)
+
+
+def read_config():
+    config_file = open('config.json', 'r')
+    print('Read config.json.')
+    return config_file.read()
+
+
+def set_ai_levels():
+    if night == 1:
+        bonnie.ai = 0
+        chica.ai = 0
+    elif night == 2:
+        bonnie.ai = 5
+        chica.ai = 5
 
 
 def mouse_delta_x():
@@ -37,10 +78,27 @@ if __name__ == '__main__':
     pygame.display.set_icon(icon)
     clock = pygame.time.Clock()
     running = True
-    hour = 0
-    hour_event = pygame.USEREVENT + 1
-    hour_number = images.screens['hour']
-    num_width = hour_number.images[0].get_width()
+    font = pygame.font.Font(None, 16)
+
+    default_config = {
+        'night': 1,
+        'hour': 0,
+        'disable_jumpscares': False,
+        'override_ai': False,
+        'bonnie_ai': 20,
+        'chica_ai': 20,
+        'enable_debug_text': False,
+        'enable_cheat_keys': False,
+        'disable_natural_ai_changes': False
+    }
+    config = load_config(default_config)
+    night = config['night']
+    hour = config['hour']
+    disable_jumpscares = config['disable_jumpscares']
+    override_ai = config['override_ai']
+    enable_debug_text = config['enable_debug_text']
+    enable_cheat_keys = config['enable_cheat_keys']
+    disable_natural_ai_changes = config['disable_natural_ai_changes']
 
     # convert image pixel formats for performant blit
     for s in images.screens:
@@ -57,8 +115,18 @@ if __name__ == '__main__':
     right_door_rect = pygame.Rect(SCREEN_X - 262 - 18, 148, 262, 538)
     run_back_rect = pygame.Rect(10, 682, 998, 80)
 
-    bonnie = ai.Animatronic('bonnie', 20, 'mid', random.randint(2, 5), 'left')
-    chica = ai.Animatronic('chica', 20, 'mid', random.randint(3, 5), 'right')
+    bonnie = ai.Animatronic('bonnie', 'mid', random.randint(2, 5), 'left')
+    chica = ai.Animatronic('chica', 'mid', random.randint(3, 5), 'right')
+
+    if override_ai:
+        bonnie.ai = config['bonnie_ai']
+        chica.ai = config['chica_ai']
+    else:
+        set_ai_levels()
+
+    hour_event = pygame.USEREVENT + 1
+    hour_number = images.screens['hour']
+    num_width = hour_number.images[0].get_width()
 
     second_event = pygame.USEREVENT + 2
     listening = ''
@@ -70,8 +138,8 @@ if __name__ == '__main__':
 
     run_back_debounce = False
     game_over = False
+    jumpscared_by = ''
     cleared = False
-    night = 1
 
     pygame.time.set_timer(hour_event, 60000)
     pygame.time.set_timer(second_event, 1000)
@@ -92,46 +160,53 @@ if __name__ == '__main__':
                     elif right_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == screen.frames - 1:
                         screen = images.screens['run_right_door']
                         animation_frame = 0
-            if event.type == hour_event:
+            elif event.type == hour_event:
                 hour += 1
-                if night == 1:
-                    if hour == 2:
-                        bonnie.ai += 1
-                        chica.ai += 1
-                    elif hour == 3:
-                        bonnie.ai += 2
-                        chica.ai += 1
-                elif night == 2:
-                    if hour == 3:
-                        bonnie.ai += 2
-                        chica.ai += 2
-                elif night == 3:
-                    if hour == 3:
-                        bonnie.ai += 3
-                        chica.ai += 3
-                elif night == 4:
-                    if hour == 3:
-                        bonnie.ai += 2
-                        chica.ai += 2
-                elif night == 6:
-                    if hour == 4:
-                        bonnie.ai -= 12
-                        chica.ai -= 12
+                if not disable_natural_ai_changes:
+                    if night == 1:
+                        if hour == 2:
+                            bonnie.ai += 1
+                            chica.ai += 1
+                        elif hour == 3:
+                            bonnie.ai += 2
+                            chica.ai += 1
+                    elif night == 2:
+                        if hour == 3:
+                            bonnie.ai += 2
+                            chica.ai += 2
+                    elif night == 3:
+                        if hour == 3:
+                            bonnie.ai += 3
+                            chica.ai += 3
+                    elif night == 4:
+                        if hour == 3:
+                            bonnie.ai += 2
+                            chica.ai += 2
+                    elif night == 6:
+                        if hour == 4:
+                            bonnie.ai -= 12
+                            chica.ai -= 12
                 if 2 <= night <= 4:
                     if hour == bonnie.force_move_hour:
                         bonnie.force_move = True
                     if hour == chica.force_move_hour:
                         chica.force_move = True
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_t:
-                    pygame.event.post(pygame.event.Event(hour_event))
-                elif event.key == pygame.K_j:
-                    bonnie.room_jumpscare = True
-            if event.type == pygame.QUIT:
-                running = False
+                if enable_cheat_keys:
+                    if event.key == pygame.K_t:
+                        pygame.event.post(pygame.event.Event(hour_event))
+                    elif event.key == pygame.K_b:
+                        screen = images.screens['jumpscare_bonnie_room']
+                        animation_frame = 0
+                        bonnie.room_jumpscare = True
+                    elif event.key == pygame.K_c:
+                        chica.room_jumpscare = True
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+            elif event.type == pygame.QUIT:
+                pygame.quit()
 
         if hour == 6:
-            print('Game is over')
             running = False
 
         listening = ''
@@ -148,12 +223,6 @@ if __name__ == '__main__':
         if screen.name == 'room':
             # looking around the room
             screen.x += mouse_delta_x()
-            # update these screens since they are wide
-            images.screens['run_left_door'].x = screen.x
-            images.screens['run_right_door'].x = screen.x
-            images.screens['run_bed'].x = screen.x
-            images.screens['start_room_bed'].x = screen.x
-            # start room doesn't need since it's always in the same spot
 
             # flashlight animation
             if screen.x <= SCREEN_X - room_width:  # right side clamp
@@ -167,6 +236,12 @@ if __name__ == '__main__':
                     animation_frame += 0.5
                 elif animation_frame > 4:
                     animation_frame -= 0.5
+            # update these screens since they are wide (after clamp)
+            images.screens['run_left_door'].x = screen.x
+            images.screens['run_right_door'].x = screen.x
+            images.screens['run_bed'].x = screen.x
+            images.screens['start_room_bed'].x = screen.x
+            # start room doesn't need since it's always in the same spot
             if animation_frame > screen.frames - 1:  # right side clamp animation
                 animation_frame = screen.frames - 1
             elif animation_frame < 0:  # left side clamp animation
@@ -298,10 +373,11 @@ if __name__ == '__main__':
                 screen.x = -240
         elif screen.jumpscare:
             game_over = True
-            if animation_frame < screen.frames - 1:
-                animation_frame += 0.5
-            else:
-                running = False
+            if not disable_jumpscares:
+                if animation_frame < screen.frames - 1:
+                    animation_frame += 0.5
+                else:
+                    running = False
         elif screen.name == 'run_bed':
             if animation_frame < screen.frames - 1:
                 animation_frame += 0.5
@@ -365,7 +441,12 @@ if __name__ == '__main__':
         chica.move(viewing_hall)
 
         # we increment frames by 0.5 to get that 30 fps animation FNaF 4 seems to have, so floor all the frame values
-        window.blit(screen.images[math.floor(animation_frame)], (screen.x, screen.y))
+        if disable_jumpscares and screen.jumpscare:
+            window.fill((0, 0, 0))
+            window.blit(font.render(f'Jumpscare: {screen.name}', True, (255, 255, 255)), (380, 50))
+            running = False
+        else:
+            window.blit(screen.images[math.floor(animation_frame)], (screen.x, screen.y))
         if retreating == 'bonnie' and viewing_hall == 'left':
             window.blit(images.screens['retreating_bonnie'].images[math.floor(retreat_frame)], (0, 0))
         elif retreating == 'chica' and viewing_hall == 'right':
@@ -377,10 +458,30 @@ if __name__ == '__main__':
         else:
             window.blit(hour_number.images[hour - 1], (hour_number.x + num_width, hour_number.y))
         window.blit(hour_number.images[hour_number.frames - 1], (958, 32))
-        print(f'Bonnie location: {bonnie.location}')
-        print(f'Chica location: {chica.location}')
-        print(bonnie.room_jumpscare)
-        print(chica.room_jumpscare)
+
+        if enable_debug_text:
+            window.blit(font.render(f'Bonnie location: {bonnie.location}', True, (255, 255, 255)), (0, 0))
+            window.blit(font.render(f'Chica location: {chica.location}', True, (255, 255, 255)), (0, 16))
+            pending_jumpscares = []
+            if chica.room_jumpscare:
+                pending_jumpscares.append(chica.name)
+            if bonnie.room_jumpscare:
+                pending_jumpscares.append(bonnie.name)
+            pending_jumpscares_text = ', '.join(pending_jumpscares)
+            window.blit(font.render(f'Jumpscares pending: {pending_jumpscares_text}', True, (255, 255, 255)), (0, 32))
+            window.blit(font.render(f'Bonnie AI: {bonnie.ai}', True, (255, 255, 255)), (0, 48))
+            window.blit(font.render(f'Chica AI: {chica.ai}', True, (255, 255, 255)), (0, 64))
+            window.blit(font.render(f'Screen: {screen.name}', True, (255, 255, 255)), (0, 80))
+            window.blit(font.render(f'Frame: {math.floor(animation_frame)}', True, (255, 255, 255)), (0, 96))
+            window.blit(font.render(f'{round(clock.get_fps())} FPS', True, (255, 255, 255)), (0, 112))
+
         pygame.display.flip()
         dt = clock.tick(60)
-    pygame.quit()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+            elif event.type == pygame.QUIT:
+                pygame.quit()

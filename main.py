@@ -1,9 +1,11 @@
-import ai
-import images
 import json
 import math
-import pygame
 import random
+
+import pygame
+
+import ai
+import images
 
 
 # FNaF 4 Remake by me

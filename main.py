@@ -79,7 +79,7 @@ def mouse_delta_x():
 
 
 def draw_text(string, x, row):
-    window.blit(font.render(string, True, (255, 255, 255)), (x, row*16))
+    window.blit(font.render(string, True, (255, 255, 255)), (x, row * 16))
 
 
 if __name__ == '__main__':
@@ -237,11 +237,11 @@ if __name__ == '__main__':
                     if event.key == pygame.K_t:
                         pygame.event.post(pygame.event.Event(hour_event))
                     elif event.key == pygame.K_b:
-                        screen = images.screens['jumpscare_bonnie_room']
-                        animation_frame = 0
-                        bonnie.room_jumpscare = True
+                        bonnie.location = 'hall_near'
+                        bonnie.seconds_at_door = 20 - night
                     elif event.key == pygame.K_c:
-                        chica.room_jumpscare = True
+                        chica.location = 'hall_near'
+                        chica.seconds_at_door = 20 - night
                     elif event.key == pygame.K_f:
                         freddy.progress += 10
                 if event.key == pygame.K_ESCAPE:
@@ -508,8 +508,8 @@ if __name__ == '__main__':
                 screen = images.screens['jumpscare_freddy_room']
                 animation_frame = 0
 
-        bonnie.update(screen, night)
-        chica.update(screen, night)
+        bonnie.update(screen, night, viewing_bed, animation_frame)
+        chica.update(screen, night, viewing_bed, animation_frame)
         freddy.update(screen, night)
 
         bonnie.move(viewing_hall)

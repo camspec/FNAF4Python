@@ -40,7 +40,7 @@ class Animatronic:
                     Animatronic.cancel_movement = True
             if self.location == 'hall_near':
                 self.seconds_at_door += 1
-            if second_intervals % 4 == 0 and self.room_jumpscare and screen.name == 'bed':
+            if second_intervals % 4 == 0 and self.room_jumpscare:
                 Animatronic.force_turn = True
         elif self.name == 'freddy':
             if second_intervals % 3 == 0 and self.progress >= 60 and screen.name == 'bed':
@@ -48,16 +48,16 @@ class Animatronic:
             if second_intervals % 4 == 0 and not viewing_bed:
                 self.progress += self.ai
 
-    def update(self, screen, night):
+    def update(self, screen, night, viewing_bed=False, animation_frame=0):
         if self.name == 'bonnie' or self.name == 'chica':
             # force move
-            if self.force_move and screen.name == 'room':
+            if self.force_move and screen.name == 'room' and animation_frame == 4:
                 self.location = 'hall_near'
                 self.force_move = False
             if self.location != 'hall_far' and self.location != 'hall_near':
                 self.seconds_at_door = 0
             # determine if we should jumpscare
-            if self.seconds_at_door > 20 - night:
+            if self.seconds_at_door > 20 - night and viewing_bed:
                 self.room_jumpscare = True
         elif self.name == 'freddy':
             if self.progress >= 80:

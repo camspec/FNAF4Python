@@ -17,8 +17,10 @@ class Animatronic:
         self.seconds_at_door = 0
         self.force_move = False
         self.room_jumpscare = False
+        self.bed_jumpscare = False
+        self.countdown = 0
 
-    def interval_update(self, second_intervals, door_shut, listening, screen):
+    def interval_update(self, second_intervals, screen, door_shut='', listening='', viewing_bed=False):
         if self.name == 'bonnie' or self.name == 'chica':
             self.random = random.randint(1, 2)
             if second_intervals % 5 == 0 and not Animatronic.cancel_movement:
@@ -40,6 +42,11 @@ class Animatronic:
                 self.seconds_at_door += 1
             if second_intervals % 4 == 0 and self.room_jumpscare and screen.name == 'bed':
                 Animatronic.force_turn = True
+        elif self.name == 'freddy':
+            if second_intervals % 3 == 0 and self.progress >= 60 and screen.name == 'bed':
+                self.bed_jumpscare = True
+            if second_intervals % 4 == 0 and not viewing_bed:
+                self.progress += self.ai
 
     def update(self, screen, night):
         if self.name == 'bonnie' or self.name == 'chica':
@@ -52,6 +59,15 @@ class Animatronic:
             # determine if we should jumpscare
             if self.seconds_at_door > 20 - night:
                 self.room_jumpscare = True
+        elif self.name == 'freddy':
+            if self.progress >= 80:
+                # 0: countdown hasn't started yet
+                if self.countdown == 0:
+                    self.countdown = 50 + random.randint(0, 99)
+                elif self.countdown > 1:
+                    self.countdown -= 1
+                elif self.countdown == 1:
+                    self.room_jumpscare = True
 
     def move(self, viewing_hall):
         if self.name == 'bonnie' or self.name == 'chica':

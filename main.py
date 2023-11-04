@@ -5,6 +5,7 @@ import math
 import pygame
 import random
 
+
 # FNaF 4 Remake by me
 # All images, audio, and characters used in this project are owned by Scott Cawthon.
 
@@ -44,9 +45,11 @@ def set_ai_levels():
     if night == 1:
         bonnie.ai = 0
         chica.ai = 0
+        freddy.ai = 0
     elif night == 2:
         bonnie.ai = 5
         chica.ai = 5
+        freddy.ai = 2
 
 
 def mouse_delta_x():
@@ -65,6 +68,10 @@ def mouse_delta_x():
         # slow left
         return 6
     return 0
+
+
+def draw_text(string, x, row):
+    window.blit(font.render(string, True, (255, 255, 255)), (x, row*16))
 
 
 if __name__ == '__main__':
@@ -87,6 +94,7 @@ if __name__ == '__main__':
         'override_ai': False,
         'bonnie_ai': 20,
         'chica_ai': 20,
+        'freddy_ai': 20,
         'enable_debug_text': False,
         'enable_cheat_keys': False,
         'disable_natural_ai_changes': False
@@ -117,10 +125,12 @@ if __name__ == '__main__':
 
     bonnie = ai.Animatronic('bonnie', 'mid', random.randint(2, 5), 'left')
     chica = ai.Animatronic('chica', 'mid', random.randint(3, 5), 'right')
+    freddy = ai.Animatronic('freddy', progress=0)
 
     if override_ai:
         bonnie.ai = config['bonnie_ai']
         chica.ai = config['chica_ai']
+        freddy.ai = config['freddy_ai']
     else:
         set_ai_levels()
 
@@ -136,6 +146,9 @@ if __name__ == '__main__':
     viewing_bed = False
     random_bed_view = random.randint(1, 100)
 
+    twentieth_second_event = pygame.USEREVENT + 3
+    fifth_second_event = pygame.USEREVENT + 4
+
     run_back_debounce = False
     game_over = False
     jumpscared_by = ''
@@ -143,15 +156,36 @@ if __name__ == '__main__':
 
     pygame.time.set_timer(hour_event, 60000)
     pygame.time.set_timer(second_event, 1000)
+    pygame.time.set_timer(twentieth_second_event, 50)
+    pygame.time.set_timer(fifth_second_event, 200)
     second_intervals = 0
+    afk_seconds = 0
 
     while running:
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
-            if event.type == second_event:
+            if event.type == twentieth_second_event:
+                if viewing_bed and freddy.progress > 0:
+                    if freddy.progress == 30:
+                        retreating = 'freddle_3'
+                        retreat_frame = 0
+                    elif freddy.progress == 20:
+                        retreating = 'freddle_2'
+                        retreat_frame = 5
+                    elif freddy.progress == 10:
+                        retreating = 'freddle_1'
+                        retreat_frame = 10
+                    freddy.progress -= 1
+            elif event.type == fifth_second_event:
+                # if you haven't run in 30 seconds on night 2+, progress is constant
+                if night > 1 and afk_seconds >= 30 and not viewing_bed:
+                    freddy.progress += 1
+            elif event.type == second_event:
                 second_intervals += 1
-                bonnie.interval_update(second_intervals, door_shut, listening, screen)
-                chica.interval_update(second_intervals, door_shut, listening, screen)
+                afk_seconds += 1
+                chica.interval_update(second_intervals, screen, door_shut, listening)
+                bonnie.interval_update(second_intervals, screen, door_shut, listening)
+                freddy.interval_update(second_intervals, screen, viewing_bed=viewing_bed)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if screen.name == 'room':
                     if left_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
@@ -167,9 +201,11 @@ if __name__ == '__main__':
                         if hour == 2:
                             bonnie.ai += 1
                             chica.ai += 1
+                            freddy.ai += 1
                         elif hour == 3:
                             bonnie.ai += 2
                             chica.ai += 1
+                            freddy.ai += 1
                     elif night == 2:
                         if hour == 3:
                             bonnie.ai += 2
@@ -182,10 +218,6 @@ if __name__ == '__main__':
                         if hour == 3:
                             bonnie.ai += 2
                             chica.ai += 2
-                    elif night == 6:
-                        if hour == 4:
-                            bonnie.ai -= 12
-                            chica.ai -= 12
                 if 2 <= night <= 4:
                     if hour == bonnie.force_move_hour:
                         bonnie.force_move = True
@@ -201,6 +233,8 @@ if __name__ == '__main__':
                         bonnie.room_jumpscare = True
                     elif event.key == pygame.K_c:
                         chica.room_jumpscare = True
+                    elif event.key == pygame.K_f:
+                        freddy.progress += 10
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
             elif event.type == pygame.QUIT:
@@ -212,14 +246,9 @@ if __name__ == '__main__':
         listening = ''
         viewing_hall = ''
 
-        if retreating == '':
-            retreat_frame = 0
-        else:
-            if retreat_frame < 15:
-                retreat_frame += 0.5
-            else:
-                retreating = ''
-
+        # simple animation cycles depending on which screen is selected
+        # if the frame is the last, go back to the first frame
+        # also initialize frame number when switching screens
         if screen.name == 'room':
             # looking around the room
             screen.x += mouse_delta_x()
@@ -254,33 +283,34 @@ if __name__ == '__main__':
             else:
                 run_back_debounce = False
         elif screen.name == 'run_left_door':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['running']
                 running_location = 'start_left_door'
                 animation_frame = 0
         elif screen.name == 'run_right_door':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['running']
                 running_location = 'start_right_door'
                 animation_frame = 0
         elif screen.name == 'running':
-            if animation_frame < screen.frames - 1:
+            afk_seconds = 0
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens[running_location]
                 animation_frame = 0
         elif screen.name == 'start_left_door':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['left_door']
                 animation_frame = 0
         elif screen.name == 'start_right_door':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['right_door']
@@ -288,9 +318,9 @@ if __name__ == '__main__':
         elif screen.name == 'left_door':
             # in order of priority in the game
             if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-                if animation_frame < screen.frames - 1:
+                if animation_frame <= screen.frames - 1:
                     # frames 2 and above are closing door
-                    if animation_frame <= 1:
+                    if animation_frame < 2:
                         animation_frame = 2
                     else:
                         animation_frame += 0.5
@@ -324,9 +354,9 @@ if __name__ == '__main__':
         elif screen.name == 'right_door':
             # in order of priority in the game
             if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-                if animation_frame < screen.frames - 1:
+                if animation_frame <= screen.frames - 1:
                     # frames 2 and above are closing door
-                    if animation_frame <= 1:
+                    if animation_frame < 2:
                         animation_frame = 2
                     else:
                         animation_frame += 0.5
@@ -358,14 +388,14 @@ if __name__ == '__main__':
                 listening = 'right'
                 animation_frame = 0
         elif screen.name == 'leave_left_door' or screen.name == 'leave_right_door':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['running']
                 running_location = 'start_room'
                 animation_frame = 0
         elif screen.name == 'start_room':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['room']
@@ -373,38 +403,69 @@ if __name__ == '__main__':
                 screen.x = -240
         elif screen.jumpscare:
             game_over = True
-            if not disable_jumpscares:
-                if animation_frame < screen.frames - 1:
-                    animation_frame += 0.5
-                else:
-                    running = False
+            if animation_frame <= screen.frames - 1:
+                animation_frame += 0.5
+            else:
+                running = False
         elif screen.name == 'run_bed':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['start_bed']
                 animation_frame = 0
         elif screen.name == 'start_bed':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['bed']
-                animation_frame = 22
+                animation_frame = 19
         elif screen.name == 'bed':
             if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
-                viewing_bed = True
-                if random_bed_view == 1:
-                    animation_frame = 19
-                elif random_bed_view == 2:
-                    animation_frame = 20
-                elif random_bed_view == 3:
-                    animation_frame = 21
+                if freddy.progress >= 60:
+                    screen = images.screens['jumpscare_freddy_bed']
+                    animation_frame = 0
+                elif 30 <= freddy.progress < 60:
+                    if viewing_bed:
+                        if animation_frame <= 4:
+                            animation_frame += 0.5
+                        else:
+                            animation_frame = 0
+                    else:
+                        # set to first frame only if the flashlight was just turned on
+                        animation_frame = 0
+                elif 20 <= freddy.progress < 30:
+                    if viewing_bed:
+                        if animation_frame <= 9:
+                            animation_frame += 0.5
+                        else:
+                            animation_frame = 5
+                    else:
+                        animation_frame = 6
+                elif 10 <= freddy.progress < 20:
+                    if viewing_bed:
+                        if animation_frame <= 14:
+                            animation_frame += 0.5
+                        else:
+                            animation_frame = 10
+                    else:
+                        animation_frame = 10
                 else:
-                    animation_frame = 18
+                    if random_bed_view == 1:
+                        animation_frame = 16
+                    elif random_bed_view == 2:
+                        animation_frame = 17
+                    elif random_bed_view == 3:
+                        animation_frame = 18
+                    else:
+                        animation_frame = 15
+                viewing_bed = True
             else:
                 viewing_bed = False
                 random_bed_view = random.randint(1, 100)
-                animation_frame = 22
+                animation_frame = 19
+                if freddy.bed_jumpscare:
+                    screen = images.screens['jumpscare_freddy_bed']
+                    animation_frame = 0
             if run_back_rect.collidepoint(pygame.mouse.get_pos()) or ai.Animatronic.force_turn:
                 if not run_back_debounce and not viewing_bed or ai.Animatronic.force_turn:
                     screen = images.screens['leave_bed']
@@ -413,11 +474,11 @@ if __name__ == '__main__':
             else:
                 run_back_debounce = False
         elif screen.name == 'leave_bed':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 # priority: chica, bonnie, freddy bed, freddy not flashlight, foxy force
-                # when freddy counter >= 80, timer of 50 + random(0 to 49) counts down until 1, then jumpscare happens
+                # when freddy counter >= 80, timer of 50 + random(0 to 99) counts down until 1, then jumpscare happens
                 if chica.room_jumpscare:
                     screen = images.screens['jumpscare_chica_room']
                     animation_frame = 0
@@ -428,29 +489,63 @@ if __name__ == '__main__':
                     screen = images.screens['start_room_bed']
                     animation_frame = 0
         elif screen.name == 'start_room_bed':
-            if animation_frame < screen.frames - 1:
+            if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
                 screen = images.screens['room']
                 animation_frame = 4
+        if not screen.jumpscare:
+            if freddy.room_jumpscare:
+                screen = images.screens['jumpscare_freddy_room']
+                animation_frame = 0
 
         bonnie.update(screen, night)
         chica.update(screen, night)
+        freddy.update(screen, night)
 
         bonnie.move(viewing_hall)
         chica.move(viewing_hall)
 
         # we increment frames by 0.5 to get that 30 fps animation FNaF 4 seems to have, so floor all the frame values
         if disable_jumpscares and screen.jumpscare:
+            # black screen and say who you were killed by
             window.fill((0, 0, 0))
-            window.blit(font.render(f'Jumpscare: {screen.name}', True, (255, 255, 255)), (380, 50))
+            draw_text(f'Jumpscare: {screen.name}', 380, 3)
             running = False
         else:
             window.blit(screen.images[math.floor(animation_frame)], (screen.x, screen.y))
-        if retreating == 'bonnie' and viewing_hall == 'left':
-            window.blit(images.screens['retreating_bonnie'].images[math.floor(retreat_frame)], (0, 0))
-        elif retreating == 'chica' and viewing_hall == 'right':
-            window.blit(images.screens['retreating_chica'].images[math.floor(retreat_frame)], (0, 0))
+            # retreating animations are played above everything else because their frames are independent
+            if retreating == 'bonnie' and viewing_hall == 'left':
+                window.blit(images.screens['retreating_bonnie'].images[math.floor(retreat_frame)], (0, 0))
+            elif retreating == 'chica' and viewing_hall == 'right':
+                window.blit(images.screens['retreating_chica'].images[math.floor(retreat_frame)], (0, 0))
+            elif retreating != '' and viewing_bed:
+                window.blit(images.screens['retreating_freddles'].images[math.floor(retreat_frame)], (0, 0))
+
+        if retreating == '':
+            retreat_frame = 0
+        elif retreating == 'bonnie' or retreating == 'chica':
+            if retreat_frame <= 15:
+                retreat_frame += 0.5
+            else:
+                retreating = ''
+        else:
+            if retreating == 'freddle_3':
+                if retreat_frame <= 4:
+                    retreat_frame += 0.5
+                else:
+                    retreating = ''
+            elif retreating == 'freddle_2':
+                if retreat_frame <= 9:
+                    retreat_frame += 0.5
+                else:
+                    retreating = ''
+            elif retreating == 'freddle_1':
+                if retreat_frame <= 14:
+                    retreat_frame += 0.5
+                else:
+                    retreating = ''
+
         # time
         if hour == 0:
             window.blit(hour_number.images[0], (hour_number.x, hour_number.y))
@@ -460,20 +555,33 @@ if __name__ == '__main__':
         window.blit(hour_number.images[hour_number.frames - 1], (958, 32))
 
         if enable_debug_text:
-            window.blit(font.render(f'Bonnie location: {bonnie.location}', True, (255, 255, 255)), (0, 0))
-            window.blit(font.render(f'Chica location: {chica.location}', True, (255, 255, 255)), (0, 16))
+            draw_text(f'Night: {night}', 0, 0)
+            draw_text(f'Bonnie location: {bonnie.location}', 0, 1)
+            draw_text(f'Chica location: {chica.location}', 0, 2)
             pending_jumpscares = []
             if chica.room_jumpscare:
-                pending_jumpscares.append(chica.name)
+                pending_jumpscares.append('chica room')
+            if chica.location == 'hall_near':
+                pending_jumpscares.append('chica hall')
             if bonnie.room_jumpscare:
-                pending_jumpscares.append(bonnie.name)
+                pending_jumpscares.append('bonnie room')
+            if bonnie.location == 'hall_near':
+                pending_jumpscares.append('bonnie hall')
+            if freddy.progress >= 60:
+                pending_jumpscares.append('freddy bed')
+            if freddy.progress >= 80:
+                pending_jumpscares.append('freddy room')
             pending_jumpscares_text = ', '.join(pending_jumpscares)
-            window.blit(font.render(f'Jumpscares pending: {pending_jumpscares_text}', True, (255, 255, 255)), (0, 32))
-            window.blit(font.render(f'Bonnie AI: {bonnie.ai}', True, (255, 255, 255)), (0, 48))
-            window.blit(font.render(f'Chica AI: {chica.ai}', True, (255, 255, 255)), (0, 64))
-            window.blit(font.render(f'Screen: {screen.name}', True, (255, 255, 255)), (0, 80))
-            window.blit(font.render(f'Frame: {math.floor(animation_frame)}', True, (255, 255, 255)), (0, 96))
-            window.blit(font.render(f'{round(clock.get_fps())} FPS', True, (255, 255, 255)), (0, 112))
+            draw_text(f'Pending jumpscares: {pending_jumpscares_text}', 0, 3)
+            draw_text(f'Bonnie AI: {bonnie.ai}', 0, 4)
+            draw_text(f'Chica AI: {chica.ai}', 0, 5)
+            draw_text(f'Freddy AI: {freddy.ai}', 0, 6)
+            draw_text(f'Freddy progress: {freddy.progress}', 0, 7)
+            draw_text(f'Screen: {screen.name}', 0, 8)
+            draw_text(f'Frame: {math.floor(animation_frame)}', 0, 9)
+            draw_text(f'{round(clock.get_fps())} FPS', 0, 10)
+            draw_text(f'Seconds without running: {afk_seconds}', 0, 11)
+            draw_text(f'Freddy countdown: {freddy.countdown}', 0, 12)
 
         pygame.display.flip()
         dt = clock.tick(60)

@@ -5,6 +5,7 @@
     "override_ai": false,
     "bonnie_ai": 20,
     "chica_ai": 20,
+    "freddy_ai": 20,
     "enable_debug_text": false,
     "enable_cheat_keys": false,
     "disable_natural_ai_changes": false

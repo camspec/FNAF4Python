@@ -36,9 +36,12 @@ screens = {
     'jumpscare_chica_hall': Screen('jumpscare_chica_hall', 26, jumpscare=True),
     'run_bed': Screen('run_bed', 9),
     'start_bed': Screen('start_bed', 10),
-    'bed': Screen('bed', 23),
+    'bed': Screen('bed', 20),
     'leave_bed': Screen('leave_bed', 11),
     'start_room_bed': Screen('start_room_bed', 9),
     'jumpscare_bonnie_room': Screen('jumpscare_bonnie_room', 26, jumpscare=True),
-    'jumpscare_chica_room': Screen('jumpscare_chica_room', 26, jumpscare=True)
+    'jumpscare_chica_room': Screen('jumpscare_chica_room', 26, jumpscare=True),
+    'retreating_freddles': Screen('retreating_freddles', 15),
+    'jumpscare_freddy_bed': Screen('jumpscare_freddy_bed', 26, jumpscare=True),
+    'jumpscare_freddy_room': Screen('jumpscare_freddy_room', 26, jumpscare=True)
 }

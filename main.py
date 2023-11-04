@@ -64,16 +64,12 @@ def mouse_delta_x():
     # very close estimates
     mouse_x = pygame.mouse.get_pos()[0] + 1  # add 1 so the math works out (max 1024 instead of 1023)
     if mouse_x > 4 / 5 * SCREEN_X:
-        # fast right
         return -12
     elif mouse_x > 2 / 3 * SCREEN_X:
-        # slow right
         return -6
     elif mouse_x < 1 / 5 * SCREEN_X:
-        # fast left
         return 12
     elif mouse_x < 1 / 3 * SCREEN_X:
-        # slow left
         return 6
     return 0
 

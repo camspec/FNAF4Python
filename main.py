@@ -149,6 +149,7 @@ if __name__ == '__main__':
     second_event = pygame.USEREVENT + 2
     listening = ''
     door_shut = ''
+    door_status = 'open'
     retreating = ''
     viewing_hall = ''
     viewing_bed = False
@@ -195,7 +196,7 @@ if __name__ == '__main__':
                 bonnie.interval_update(second_intervals, screen, door_shut, listening)
                 freddy.interval_update(second_intervals, screen, viewing_bed=viewing_bed)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if screen.name == 'room':
+                if screen.name == 'room' and event.button == 1:
                     if left_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
                         screen = images.screens['run_left_door']
                         animation_frame = 0
@@ -238,10 +239,10 @@ if __name__ == '__main__':
                         pygame.event.post(pygame.event.Event(hour_event))
                     elif event.key == pygame.K_b:
                         bonnie.location = 'hall_near'
-                        bonnie.seconds_at_door = 20 - night
+                        bonnie.seconds_at_door = 21 - night
                     elif event.key == pygame.K_c:
                         chica.location = 'hall_near'
-                        chica.seconds_at_door = 20 - night
+                        chica.seconds_at_door = 21 - night
                     elif event.key == pygame.K_f:
                         freddy.progress += 10
                 if event.key == pygame.K_ESCAPE:
@@ -326,24 +327,31 @@ if __name__ == '__main__':
                 animation_frame = 0
         elif screen.name == 'left_door':
             # in order of priority in the game
-            if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+            if door_status == 'closing':
                 if animation_frame <= screen.frames - 1:
-                    # frames 2 and above are closing door
-                    if animation_frame < 2:
-                        animation_frame = 2
-                    else:
-                        animation_frame += 0.5
+                    animation_frame += 0.5
                 else:
+                    door_status = 'closed'
                     door_shut = 'left'
                     if bonnie.location == 'hall_far':
                         bonnie.location = 'hall_near'
                         # bringing them closer by closing the door cancels bonnie and chica until opened again
                         ai.Animatronic.cancel_movement = True
                         bonnie.will_move = False
-            elif animation_frame > 2:
+            elif door_status == 'opening':
+                if animation_frame > 2:
+                    animation_frame -= 0.5
+                else:
+                    door_status = 'open'
+            elif keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+                if door_status == 'open':
+                    # frames 2 and above are closing door
+                    animation_frame = 2
+                    door_status = 'closing'
+            elif door_status == 'closed':
+                door_status = 'opening'
                 door_shut = ''
                 ai.Animatronic.cancel_movement = False
-                animation_frame -= 0.5
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
                 animation_frame = 1
                 viewing_hall = 'left'
@@ -362,24 +370,31 @@ if __name__ == '__main__':
                 animation_frame = 0
         elif screen.name == 'right_door':
             # in order of priority in the game
-            if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+            if door_status == 'closing':
                 if animation_frame <= screen.frames - 1:
-                    # frames 2 and above are closing door
-                    if animation_frame < 2:
-                        animation_frame = 2
-                    else:
-                        animation_frame += 0.5
+                    animation_frame += 0.5
                 else:
+                    door_status = 'closed'
                     door_shut = 'right'
                     if chica.location == 'hall_far':
                         chica.location = 'hall_near'
                         # bringing them closer by closing the door cancels bonnie and chica until opened again
                         ai.Animatronic.cancel_movement = True
                         chica.will_move = False
-            elif animation_frame > 2:
+            elif door_status == 'opening':
+                if animation_frame > 2:
+                    animation_frame -= 0.5
+                else:
+                    door_status = 'open'
+            elif keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+                if door_status == 'open':
+                    # frames 2 and above are closing door
+                    animation_frame = 2
+                    door_status = 'closing'
+            elif door_status == 'closed':
+                door_status = 'opening'
                 door_shut = ''
                 ai.Animatronic.cancel_movement = False
-                animation_frame -= 0.5
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
                 animation_frame = 1
                 viewing_hall = 'right'
@@ -486,8 +501,7 @@ if __name__ == '__main__':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
-                # priority: chica, bonnie, freddy bed, freddy not flashlight, foxy force
-                # when freddy counter >= 80, timer of 50 + random(0 to 99) counts down until 1, then jumpscare happens
+                # priority: chica > bonnie
                 if chica.room_jumpscare:
                     screen = images.screens['jumpscare_chica_room']
                     animation_frame = 0
@@ -568,11 +582,11 @@ if __name__ == '__main__':
             draw_text(f'Bonnie location: {bonnie.location}', 0, 1)
             draw_text(f'Chica location: {chica.location}', 0, 2)
             pending_jumpscares = []
-            if chica.room_jumpscare:
+            if chica.seconds_at_door > 20 - night:
                 pending_jumpscares.append('chica room')
             if chica.location == 'hall_near':
                 pending_jumpscares.append('chica hall')
-            if bonnie.room_jumpscare:
+            if bonnie.seconds_at_door > 20 - night:
                 pending_jumpscares.append('bonnie room')
             if bonnie.location == 'hall_near':
                 pending_jumpscares.append('bonnie hall')
@@ -591,6 +605,7 @@ if __name__ == '__main__':
             draw_text(f'{round(clock.get_fps())} FPS', 0, 10)
             draw_text(f'Seconds without running: {afk_seconds}', 0, 11)
             draw_text(f'Freddy countdown: {freddy.countdown}', 0, 12)
+            draw_text(f'Door status: {door_status}', 0, 13)
 
         pygame.display.flip()
         dt = clock.tick(60)

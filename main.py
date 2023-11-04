@@ -50,6 +50,14 @@ def set_ai_levels():
         bonnie.ai = 5
         chica.ai = 5
         freddy.ai = 2
+    elif night == 3:
+        bonnie.ai = 7
+        chica.ai = 7
+        freddy.ai = 3
+    elif night == 4:
+        bonnie.ai = 10
+        chica.ai = 10
+        freddy.ai = 4
 
 
 def mouse_delta_x():
@@ -210,6 +218,7 @@ if __name__ == '__main__':
                         if hour == 3:
                             bonnie.ai += 2
                             chica.ai += 2
+                            freddy.ai += 1
                     elif night == 3:
                         if hour == 3:
                             bonnie.ai += 3

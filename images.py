@@ -43,5 +43,13 @@ screens = {
     'jumpscare_chica_room': Screen('jumpscare_chica_room', 26, jumpscare=True),
     'retreating_freddles': Screen('retreating_freddles', 15),
     'jumpscare_freddy_bed': Screen('jumpscare_freddy_bed', 26, jumpscare=True),
-    'jumpscare_freddy_room': Screen('jumpscare_freddy_room', 26, jumpscare=True)
+    'jumpscare_freddy_room': Screen('jumpscare_freddy_room', 26, jumpscare=True),
+    'retreating_foxy': Screen('retreating_foxy', 18),
+    'closet_creak': Screen('closet_creak', 11, -240),
+    'jumpscare_foxy_room': Screen('jumpscare_foxy_room', 26, jumpscare=True),
+    'run_closet': Screen('run_closet', 7),
+    'start_closet': Screen('start_closet', 14),
+    'closet': Screen('closet', 11),
+    'leave_closet': Screen('leave_closet', 10),
+    'foxy_bite': Screen('foxy_bite', 11)
 }

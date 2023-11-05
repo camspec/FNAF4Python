@@ -321,8 +321,6 @@ if __name__ == '__main__':
                     screen = images.screens['run_bed']
                     run_back_debounce = True
                     animation_frame = 0
-            elif debounce_rect.collidepoint(pygame.mouse.get_pos()):
-                run_back_debounce = False
         elif screen.name == 'run_left_door':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
@@ -550,8 +548,6 @@ if __name__ == '__main__':
                     screen = images.screens['leave_bed']
                     animation_frame = 0
                     run_back_debounce = True
-            elif debounce_rect.collidepoint(pygame.mouse.get_pos()):
-                run_back_debounce = False
         elif screen.name == 'leave_bed':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
@@ -649,6 +645,8 @@ if __name__ == '__main__':
             if freddy.room_jumpscare:
                 screen = images.screens['jumpscare_freddy_room']
                 animation_frame = 0
+        if debounce_rect.collidepoint(pygame.mouse.get_pos()):
+            run_back_debounce = False
 
         bonnie.update(screen, night, viewing_bed, animation_frame)
         chica.update(screen, night, viewing_bed, animation_frame)
@@ -760,19 +758,20 @@ if __name__ == '__main__':
                 draw_text(f'Freddy countdown: {freddy.countdown}', 0, 15)
                 draw_text(f'Door shut: {door_shut}', 0, 16)
                 draw_text(f'Seconds looking at bed: {seconds_looking_at_bed}', 0, 17)
-            if draw_hitboxes:
-                hitbox_surface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
-                hitbox_surface.set_alpha(hitbox_alpha)
-                pygame.draw.rect(hitbox_surface, (255, 0, 255), slow_left_rect)
-                pygame.draw.rect(hitbox_surface, (100, 50, 255), fast_left_rect)
-                pygame.draw.rect(hitbox_surface, (255, 0, 255), slow_right_rect)
-                pygame.draw.rect(hitbox_surface, (100, 50, 255), fast_right_rect)
-                pygame.draw.rect(hitbox_surface, (255, 0, 0), left_door_rect)
-                pygame.draw.rect(hitbox_surface, (255, 0, 0), right_door_rect)
-                pygame.draw.rect(hitbox_surface, (255, 0, 0), run_back_rect)
-                pygame.draw.rect(hitbox_surface, (255, 0, 0), debounce_rect)
-                pygame.draw.rect(hitbox_surface, (255, 0, 0), closet_rect)
-                window.blit(hitbox_surface, (0, 0))
+                draw_text(f'Debounce: {run_back_debounce}', 0, 18)
+        if draw_hitboxes:
+            hitbox_surface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
+            hitbox_surface.set_alpha(hitbox_alpha)
+            pygame.draw.rect(hitbox_surface, (255, 0, 255), slow_left_rect)
+            pygame.draw.rect(hitbox_surface, (100, 50, 255), fast_left_rect)
+            pygame.draw.rect(hitbox_surface, (255, 0, 255), slow_right_rect)
+            pygame.draw.rect(hitbox_surface, (100, 50, 255), fast_right_rect)
+            pygame.draw.rect(hitbox_surface, (255, 0, 0), left_door_rect)
+            pygame.draw.rect(hitbox_surface, (255, 0, 0), right_door_rect)
+            pygame.draw.rect(hitbox_surface, (255, 0, 0), run_back_rect)
+            pygame.draw.rect(hitbox_surface, (255, 0, 0), debounce_rect)
+            pygame.draw.rect(hitbox_surface, (255, 0, 0), closet_rect)
+            window.blit(hitbox_surface, (0, 0))
 
         pygame.display.flip()
         dt = clock.tick(60)

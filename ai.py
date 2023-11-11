@@ -1,5 +1,9 @@
 import random
 
+import pygame
+
+import audio
+
 
 class Animatronic:
     cancel_movement = False
@@ -29,6 +33,14 @@ class Animatronic:
             if second_intervals % 10 == 0:
                 if self.will_move:
                     if self.location == 'hall_near' and listening != self.side:
+                        walk = random.randint(1, 4)
+                        if self.name == 'bonnie':
+                            audio.sounds[f'close_walk{walk}'].channel = pygame.mixer.Channel(7)
+                            audio.sounds[f'close_walk{walk}'].pan = -100
+                        else:
+                            audio.sounds[f'close_walk{walk}'].channel = pygame.mixer.Channel(8)
+                            audio.sounds[f'close_walk{walk}'].pan = 100
+                        audio.sounds[f'close_walk{walk}'].play()
                         self.location = 'hall_far'
                         self.will_move = False
             # clearing cannot occur if movement is cancelled (you just brought them to near hall)
@@ -85,9 +97,12 @@ class Animatronic:
                 Animatronic.force_turn = True
 
     def move(self, viewing_hall, viewing_closet=False):
+        close_walk = False
+        far_walk = False
         if self.name == 'bonnie' or self.name == 'chica':
             if self.will_move:
                 if self.location == 'mid' or self.location == 'kitchen':
+                    far_walk = True
                     self.location = self.side
                     self.will_move = False
                 elif self.location == self.side:
@@ -95,41 +110,51 @@ class Animatronic:
                         # if they're waiting to move into hall but flashlight is on,
                         # they will move right when it's off
                         if viewing_hall != self.side:
+                            close_walk = True
                             self.location = 'hall_far'
                             self.will_move = False
                     else:
+                        far_walk = True
                         if self.name == 'bonnie':
                             self.location = 'mid'
                         else:
                             self.location = 'kitchen'
                         self.will_move = False
                 elif self.location == 'hall_far':
+                    close_walk = True
                     self.location = 'hall_near'
                     self.will_move = False
         elif self.name == 'foxy':
             if self.will_move:
+                foxy_move = random.randint(1, 2)
                 if self.location == 'mid':
                     self.will_move = False
                     if self.random <= 5:
+                        audio.sounds[f'foxy_left{foxy_move}'].play()
                         self.location = 'left'
                     elif self.random > 5:
+                        audio.sounds[f'foxy_right{foxy_move}'].play()
                         self.location = 'right'
                 elif self.location == 'left':
                     if self.random <= 9:
+                        audio.sounds[f'foxy_right{foxy_move}'].play()
                         self.will_move = False
                         self.location = 'right'
                     elif self.random == 10:
                         if viewing_hall != 'left':
+                            audio.sounds['foxy_run_left'].play()
                             # if they're waiting to move into hall but flashlight is on,
                             # they will move right when it's off
                             self.will_move = False
                             self.location = 'left_hall'
                 elif self.location == 'right':
                     if self.random <= 9:
+                        audio.sounds[f'foxy_left{foxy_move}'].play()
                         self.will_move = False
                         self.location = 'left'
                     elif self.random == 10:
                         if viewing_hall != 'right':
+                            audio.sounds['foxy_run_right'].play()
                             # if they're waiting to move into hall but flashlight is on,
                             # they will move right when it's off
                             self.will_move = False
@@ -137,3 +162,21 @@ class Animatronic:
                 elif (self.location == 'closet' or self.location == 'running_to_closet') and not viewing_closet:
                     self.progress += 1
                     self.will_move = False
+        if close_walk:
+            walk = random.randint(1, 4)
+            if self.name == 'bonnie':
+                audio.sounds[f'close_walk{walk}'].channel = pygame.mixer.Channel(7)
+                audio.sounds[f'close_walk{walk}'].pan = -100
+            else:
+                audio.sounds[f'close_walk{walk}'].channel = pygame.mixer.Channel(8)
+                audio.sounds[f'close_walk{walk}'].pan = 100
+            audio.sounds[f'close_walk{walk}'].play()
+        if far_walk:
+            walk = random.randint(1, 3)
+            if self.name == 'bonnie':
+                audio.sounds[f'far_walk{walk}'].channel = pygame.mixer.Channel(7)
+                audio.sounds[f'far_walk{walk}'].pan = -100
+            else:
+                audio.sounds[f'far_walk{walk}'].channel = pygame.mixer.Channel(8)
+                audio.sounds[f'far_walk{walk}'].pan = 100
+            audio.sounds[f'far_walk{walk}'].play()

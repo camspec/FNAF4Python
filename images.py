@@ -1,5 +1,8 @@
 import pygame
 
+pygame.display.init()
+display_info = pygame.display.Info()
+
 
 class Screen:
     def __init__(self, name, frames, x=0, y=0, transparent=False, alpha=255, jumpscare=False):
@@ -28,7 +31,7 @@ screens = {
     'right_door': Screen('right_door', 12),
     'leave_left_door': Screen('leave_left_door', 9),
     'leave_right_door': Screen('leave_right_door', 10),
-    'start_room': Screen('start_room', 6, -240),
+    'start_room': Screen('start_room', 6, -238),
     'hour': Screen('hour', 7, 905, 18, True, 55),
     'retreating_bonnie': Screen('retreating_bonnie', 16),
     'jumpscare_bonnie_hall': Screen('jumpscare_bonnie_hall', 26, jumpscare=True),
@@ -45,7 +48,7 @@ screens = {
     'jumpscare_freddy_bed': Screen('jumpscare_freddy_bed', 26, jumpscare=True),
     'jumpscare_freddy_room': Screen('jumpscare_freddy_room', 26, jumpscare=True),
     'retreating_foxy': Screen('retreating_foxy', 18),
-    'closet_creak': Screen('closet_creak', 11, -240),
+    'closet_creak': Screen('closet_creak', 11, -238),
     'jumpscare_foxy_room': Screen('jumpscare_foxy_room', 26, jumpscare=True),
     'run_closet': Screen('run_closet', 7),
     'start_closet': Screen('start_closet', 14),

@@ -5,10 +5,12 @@ import random
 import pygame
 
 import ai
+import audio
 import images
+from box import hitboxes
 
 
-# FNaF 4 Remake by me
+# FNaF 4 Remake by camspec
 # All images, audio, and characters used in this project are owned by Scott Cawthon.
 
 
@@ -67,13 +69,14 @@ def set_ai_levels():
 
 
 def move_screen():
-    if fast_left_rect.collidepoint(pygame.mouse.get_pos()):
+    # when looking left, we move screen to right and vice versa
+    if hitboxes['slow_left'].rect.collidepoint(pygame.mouse.get_pos()):
         screen.x += 6
-    if slow_left_rect.collidepoint(pygame.mouse.get_pos()):
+    if hitboxes['fast_left'].rect.collidepoint(pygame.mouse.get_pos()):
         screen.x += 6
-    if fast_right_rect.collidepoint(pygame.mouse.get_pos()):
+    if hitboxes['slow_right'].rect.collidepoint(pygame.mouse.get_pos()):
         screen.x -= 6
-    if slow_right_rect.collidepoint(pygame.mouse.get_pos()):
+    if hitboxes['fast_right'].rect.collidepoint(pygame.mouse.get_pos()):
         screen.x -= 6
 
 
@@ -82,7 +85,7 @@ def draw_text(string, x, row):
 
 
 if __name__ == '__main__':
-    pygame.init()
+    pygame.display.init()
     SCREEN_X = 1024
     SCREEN_Y = 768
     SCREEN_SIZE = (SCREEN_X, SCREEN_Y)
@@ -90,8 +93,10 @@ if __name__ == '__main__':
     pygame.display.set_caption('Five Nights at Freddy\'s 4')
     icon = pygame.image.load('assets/icon/favicon.png').convert()
     pygame.display.set_icon(icon)
-    clock = pygame.time.Clock()
+
     running = True
+    clock = pygame.time.Clock()
+    pygame.font.init()
     font = pygame.font.Font(None, 16)
 
     default_config = {
@@ -128,20 +133,8 @@ if __name__ == '__main__':
             i.convert()
     screen = images.screens['room']
     room_width = screen.images[0].get_width()
-    running_location = ''
     animation_frame = 0
     retreat_frame = 0
-
-    # should be accurate hitboxes
-    left_door_rect = pygame.Rect(18, 148, 262, 538)
-    right_door_rect = pygame.Rect(SCREEN_X - 262 - 18, 148, 262, 538)
-    run_back_rect = pygame.Rect(10, 682, 998, 80)
-    debounce_rect = pygame.Rect(12, 464, 998, 192)
-    closet_rect = pygame.Rect(576, 130, 262, 538)
-    fast_left_rect = pygame.Rect(-3, -13, 206, 778)
-    slow_left_rect = pygame.Rect(-7, -13, 348, 778)
-    fast_right_rect = pygame.Rect(821, -3, 206, 778)
-    slow_right_rect = pygame.Rect(681, -1, 344, 778)
 
     bonnie = ai.Animatronic('bonnie', 'mid', random.randint(2, 5), 'left')
     chica = ai.Animatronic('chica', 'mid', random.randint(3, 5), 'right')
@@ -160,32 +153,41 @@ if __name__ == '__main__':
     hour_number = images.screens['hour']
     num_width = hour_number.images[0].get_width()
 
-    second_event = pygame.USEREVENT + 2
     listening = ''
     door_shut = ''
     door_status = 'open'
     retreating = ''
+    running_location = ''
     viewing_hall = ''
     viewing_bed = False
     viewing_closet = False
     random_bed_view = random.randint(1, 100)
 
+    second_event = pygame.USEREVENT + 2
     twentieth_second_event = pygame.USEREVENT + 3
     fifth_second_event = pygame.USEREVENT + 4
+    second_intervals = 0
+    afk_seconds = 0
+    seconds_looking_at_bed = 0
 
     run_back_debounce = False
     game_over = False
-    jumpscared_by = ''
-    cleared = False
     foxy_bit = False
 
     pygame.time.set_timer(hour_event, 60000)
     pygame.time.set_timer(second_event, 1000)
     pygame.time.set_timer(twentieth_second_event, 50)
     pygame.time.set_timer(fifth_second_event, 200)
-    second_intervals = 0
-    afk_seconds = 0
-    seconds_looking_at_bed = 0
+
+    # these sounds play nonstop at 0 volume, and actually turn on by changing volume
+    audio.sounds['ambience'].play()
+    audio.sounds['crickets'].play()
+    audio.sounds['breathing'].play()
+    audio.sounds['freddles'].play()
+    audio.sounds['kitchen'].play()
+    audio.sounds['random_call'].play()
+    random_sound = 0
+    random_call = 0
 
     while running:
         keys = pygame.key.get_pressed()
@@ -211,21 +213,35 @@ if __name__ == '__main__':
                 afk_seconds += 1
                 if viewing_bed:
                     seconds_looking_at_bed += 1
+                if second_intervals == 4:
+                    audio.sounds['clock_chime'].play()
+                if second_intervals % 10 == 0:
+                    random_sound = random.randint(1, 30)
+                if second_intervals % 2 == 0:
+                    if night == 1:
+                        random_call = random.randint(1, 40)
+                    else:
+                        random_call = random.randint(1, 200)
                 chica.interval_update(second_intervals, door_shut, listening)
                 bonnie.interval_update(second_intervals, door_shut, listening)
                 freddy.interval_update(second_intervals, viewing_bed=viewing_bed, screen=screen)
                 foxy.interval_update(second_intervals, door_shut)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if screen.name == 'room':
-                    if left_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
+                    if hitboxes['left_door'].rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 0:
+                        audio.sounds['flashlight'].play()
                         screen = images.screens['run_left_door']
                         animation_frame = 0
-                    elif right_door_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == screen.frames - 1:
+                    elif (hitboxes['right_door'].rect.collidepoint(pygame.mouse.get_pos()) and
+                          animation_frame == screen.frames - 1):
+                        audio.sounds['flashlight'].play()
                         screen = images.screens['run_right_door']
                         animation_frame = 0
-                    elif closet_rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 4:
+                    elif hitboxes['closet'].rect.collidepoint(pygame.mouse.get_pos()) and animation_frame == 4:
                         screen = images.screens['run_closet']
                         animation_frame = 0
+                if viewing_bed and hitboxes['honk'].rect.collidepoint(pygame.mouse.get_pos()):
+                    audio.sounds['honk'].play()
             elif event.type == hour_event:
                 hour += 1
                 if not disable_natural_ai_changes:
@@ -272,12 +288,18 @@ if __name__ == '__main__':
                         freddy.progress += 10
                     elif event.key == pygame.K_h:
                         foxy.location = 'right_hall'
+                    elif event.key == pygame.K_p:
+                        chica.location = 'kitchen'
                     elif event.key == pygame.K_j:
                         foxy.progress += 1
+                    elif event.key == pygame.K_s:
+                        random_sound = random.randint(1, 3)
+                    elif event.key == pygame.K_r:
+                        random_call = random.randint(1, 2)
                 if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
+                    running = False
             elif event.type == pygame.QUIT:
-                pygame.quit()
+                running = False
 
         if hour == 6:
             running = False
@@ -291,7 +313,6 @@ if __name__ == '__main__':
         # also initialize frame number when switching screens
         if screen.name == 'room':
             move_screen()
-
             # flashlight animation
             if screen.x <= SCREEN_X - room_width:  # right side clamp
                 animation_frame += 0.5
@@ -304,6 +325,11 @@ if __name__ == '__main__':
                     animation_frame += 0.5
                 elif animation_frame > 4:
                     animation_frame -= 0.5
+                else:
+                    audio.sounds['crickets'].update_volume(25)
+                    audio.sounds['clock_chime'].update_volume(25)
+                    audio.sounds['foxy_run_left'].update_volume(20)
+                    audio.sounds['foxy_run_right'].update_volume(20)
             # update these screens since they are wide (after clamp)
             # start room and closet creak don't need to update since they're always in the same spot
             images.screens['run_left_door'].x = screen.x
@@ -311,12 +337,14 @@ if __name__ == '__main__':
             images.screens['run_bed'].x = screen.x
             images.screens['start_room_bed'].x = screen.x
             images.screens['run_closet'].x = screen.x
-            closet_rect.x = screen.x + 576
+            hitboxes['left_door'].rect.x = screen.x + 18
+            hitboxes['right_door'].rect.x = screen.x + 1020
+            hitboxes['closet'].rect.x = screen.x + 576
             if animation_frame > screen.frames - 1:  # right side clamp animation
                 animation_frame = screen.frames - 1
             elif animation_frame < 0:  # left side clamp animation
                 animation_frame = 0
-            if run_back_rect.collidepoint(pygame.mouse.get_pos()):
+            if hitboxes['run_back'].rect.collidepoint(pygame.mouse.get_pos()):
                 if not run_back_debounce:
                     screen = images.screens['run_bed']
                     run_back_debounce = True
@@ -325,6 +353,10 @@ if __name__ == '__main__':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
+                audio.sounds['crickets'].update_volume(15)
+                audio.sounds['clock_chime'].update_volume(30)
+                audio.sounds['foxy_run_left'].update_volume(25)
+                audio.sounds['foxy_run_right'].update_volume(15)
                 screen = images.screens['running']
                 running_location = 'start_left_door'
                 animation_frame = 0
@@ -332,10 +364,16 @@ if __name__ == '__main__':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
+                audio.sounds['crickets'].update_volume(30)
+                audio.sounds['clock_chime'].update_volume(15)
+                audio.sounds['foxy_run_left'].update_volume(15)
+                audio.sounds['foxy_run_right'].update_volume(25)
                 screen = images.screens['running']
                 running_location = 'start_right_door'
                 animation_frame = 0
         elif screen.name == 'running':
+            if animation_frame == 0:
+                audio.sounds['carpet_run'].play()
             afk_seconds = 0
             seconds_looking_at_bed = 0
             if animation_frame <= screen.frames - 1:
@@ -343,17 +381,36 @@ if __name__ == '__main__':
             else:
                 screen = images.screens[running_location]
                 animation_frame = 0
-                if (running_location == 'start_left_door' and foxy.location == 'right_hall' or
-                        running_location == 'start_right_door' and foxy.location == 'left_hall'):
+                if running_location == 'start_left_door':
+                    audio.sounds[f'door_creak{random.randint(1, 4)}'].play()
+                    audio.sounds['crickets'].update_volume(10)
+                    audio.sounds['clock_chime'].update_volume(50)
+                    audio.sounds['foxy_run_left'].update_volume(40)
+                    audio.sounds['foxy_run_right'].update_volume(10)
+                elif running_location == 'start_right_door':
+                    audio.sounds[f'door_creak{random.randint(1, 4)}'].play()
+                    audio.sounds['crickets'].update_volume(50)
+                    audio.sounds['clock_chime'].update_volume(10)
+                    audio.sounds['foxy_run_left'].update_volume(10)
+                    audio.sounds['foxy_run_right'].update_volume(40)
+                if running_location == 'start_left_door' and foxy.location == 'right_hall':
+                    audio.sounds['foxy_enter_right'].play()
+                    foxy.location = 'running_to_closet'
+                    foxy.progress = random.randint(3, 7)
+                elif running_location == 'start_right_door' and foxy.location == 'left_hall':
+                    audio.sounds['foxy_enter_left'].play()
                     foxy.location = 'running_to_closet'
                     foxy.progress = random.randint(3, 7)
                 elif running_location == 'start_room':
                     if foxy.location == 'running_to_closet':
+                        audio.sounds['closet_creak'].play()
                         screen = images.screens['closet_creak']
                         foxy.location = 'closet'
                     if foxy.room_jumpscare:
                         screen = images.screens['jumpscare_foxy_room']
                         animation_frame = 0
+                    else:
+                        audio.sounds['flashlight'].play()
         elif screen.name == 'start_left_door':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
@@ -386,14 +443,19 @@ if __name__ == '__main__':
                     door_status = 'open'
             elif keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
                 if door_status == 'open':
+                    audio.sounds['door_creak1'].play()
                     # frames 2 and above are closing door
                     animation_frame = 2
                     door_status = 'closing'
             elif door_status == 'closed':
+                audio.sounds[f'door_creak{random.randint(1, 4)}'].play()
                 door_status = 'opening'
                 door_shut = ''
                 ai.Animatronic.cancel_movement = False
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                # if flashlight sound hasn't played yet
+                if animation_frame == 0:
+                    audio.sounds['flashlight'].play()
                 animation_frame = 1
                 viewing_hall = 'left'
                 if bonnie.location == 'hall_far':
@@ -408,10 +470,14 @@ if __name__ == '__main__':
                     if retreating == '':
                         retreating = 'foxy_left'
                         retreat_frame = 0
-            elif run_back_rect.collidepoint(pygame.mouse.get_pos()) and retreating == '':
+            elif hitboxes['run_back'].rect.collidepoint(pygame.mouse.get_pos()) and retreating == '':
+                if animation_frame == 1:
+                    audio.sounds['flashlight'].play()
                 screen = images.screens['leave_left_door']
                 animation_frame = 0
             else:
+                if animation_frame == 1:
+                    audio.sounds['flashlight'].play()
                 # closing door animation does not count as listening
                 listening = 'left'
                 animation_frame = 0
@@ -435,14 +501,18 @@ if __name__ == '__main__':
                     door_status = 'open'
             elif keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
                 if door_status == 'open':
+                    audio.sounds['door_creak1'].play()
                     # frames 2 and above are closing door
                     animation_frame = 2
                     door_status = 'closing'
             elif door_status == 'closed':
+                audio.sounds[f'door_creak{random.randint(1, 4)}'].play()
                 door_status = 'opening'
                 door_shut = ''
                 ai.Animatronic.cancel_movement = False
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                if animation_frame == 0:
+                    audio.sounds['flashlight'].play()
                 animation_frame = 1
                 viewing_hall = 'right'
                 if chica.location == 'hall_far':
@@ -457,10 +527,14 @@ if __name__ == '__main__':
                     foxy.location = 'mid'
                     retreating = 'foxy_right'
                     retreat_frame = 9
-            elif run_back_rect.collidepoint(pygame.mouse.get_pos()) and retreating == '':
+            elif hitboxes['run_back'].rect.collidepoint(pygame.mouse.get_pos()) and retreating == '':
+                if animation_frame == 1:
+                    audio.sounds['flashlight'].play()
                 screen = images.screens['leave_right_door']
                 animation_frame = 0
             else:
+                if animation_frame == 1:
+                    audio.sounds['flashlight'].play()
                 # closing door animation does not count as listening
                 listening = 'right'
                 animation_frame = 0
@@ -468,6 +542,16 @@ if __name__ == '__main__':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
+                if screen.name == 'leave_left_door':
+                    audio.sounds['crickets'].update_volume(15)
+                    audio.sounds['clock_chime'].update_volume(30)
+                    audio.sounds['foxy_run_left'].update_volume(25)
+                    audio.sounds['foxy_run_right'].update_volume(15)
+                elif screen.name == 'leave_right_door':
+                    audio.sounds['crickets'].update_volume(30)
+                    audio.sounds['clock_chime'].update_volume(15)
+                    audio.sounds['foxy_run_left'].update_volume(15)
+                    audio.sounds['foxy_run_right'].update_volume(25)
                 screen = images.screens['running']
                 running_location = 'start_room'
                 animation_frame = 0
@@ -477,9 +561,11 @@ if __name__ == '__main__':
             else:
                 screen = images.screens['room']
                 animation_frame = 4
-                screen.x = -240
+                screen.x = -238
         elif screen.jumpscare:
-            game_over = True
+            if animation_frame == 0 and not disable_jumpscares:
+                audio.Sound.main_volume = 100
+                audio.sounds['scream1'].play()
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
@@ -498,6 +584,8 @@ if __name__ == '__main__':
                 animation_frame = 19
         elif screen.name == 'bed':
             if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                if animation_frame == 19:
+                    audio.sounds['flashlight'].play()
                 if freddy.progress >= 60:
                     screen = images.screens['jumpscare_freddy_bed']
                     animation_frame = 0
@@ -537,13 +625,15 @@ if __name__ == '__main__':
                         animation_frame = 15
                 viewing_bed = True
             else:
+                if animation_frame != 19:
+                    audio.sounds['flashlight'].play()
                 viewing_bed = False
                 random_bed_view = random.randint(1, 100)
                 animation_frame = 19
                 if freddy.bed_jumpscare:
                     screen = images.screens['jumpscare_freddy_bed']
                     animation_frame = 0
-            if run_back_rect.collidepoint(pygame.mouse.get_pos()) or ai.Animatronic.force_turn:
+            if hitboxes['run_back'].rect.collidepoint(pygame.mouse.get_pos()) or ai.Animatronic.force_turn:
                 if not run_back_debounce and not viewing_bed or ai.Animatronic.force_turn:
                     screen = images.screens['leave_bed']
                     animation_frame = 0
@@ -577,7 +667,7 @@ if __name__ == '__main__':
             else:
                 screen = images.screens['room']
                 animation_frame = 4
-                screen.x = -240
+                screen.x = -238
         elif screen.name == 'run_closet':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
@@ -606,10 +696,12 @@ if __name__ == '__main__':
                     door_status = 'open'
             elif keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
                 if door_status == 'open':
+                    audio.sounds[f'closet_close{random.randint(1, 3)}'].play()
                     # frames 6 and above are closing door
                     animation_frame = 6
                     door_status = 'closing'
             elif door_status == 'closed':
+                audio.sounds[f'closet_close{random.randint(1, 3)}'].play()
                 door_status = 'opening'
                 door_shut = ''
             elif keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
@@ -624,28 +716,39 @@ if __name__ == '__main__':
                     elif foxy.progress >= 6:
                         animation_frame = 5
                         if not foxy_bit:
+                            audio.Sound.main_volume = 100
+                            audio.sounds['scream_closet'].play()
                             screen = images.screens['foxy_bite']
                             animation_frame = 0
                             foxy_bit = True
                 else:
                     animation_frame = 1
-            elif run_back_rect.collidepoint(pygame.mouse.get_pos()):
+            elif hitboxes['run_back'].rect.collidepoint(pygame.mouse.get_pos()):
+                if animation_frame == 1:
+                    audio.sounds['flashlight'].play()
                 screen = images.screens['leave_closet']
                 animation_frame = 0
             else:
+                if animation_frame == 1:
+                    audio.sounds['flashlight'].play()
                 animation_frame = 0
         elif screen.name == 'foxy_bite':
             if animation_frame <= screen.frames - 1:
                 animation_frame += 0.5
             else:
+                audio.Sound.main_volume = 20
                 screen = images.screens['closet']
                 animation_frame = 5
-        # freddy can force a jumpscare from anywhere
-        if not screen.jumpscare:
+        if screen.jumpscare:
+            game_over = True
+        else:
+            # freddy can force a jumpscare from anywhere
             if freddy.room_jumpscare:
                 screen = images.screens['jumpscare_freddy_room']
                 animation_frame = 0
-        if debounce_rect.collidepoint(pygame.mouse.get_pos()):
+                game_over = True
+
+        if hitboxes['debounce'].rect.collidepoint(pygame.mouse.get_pos()):
             run_back_debounce = False
 
         bonnie.update(screen, night, viewing_bed, animation_frame)
@@ -656,6 +759,42 @@ if __name__ == '__main__':
         bonnie.move(viewing_hall)
         chica.move(viewing_hall)
         foxy.move(viewing_hall, viewing_closet)
+
+        if (listening == 'left' and bonnie.location == 'hall_near' or
+                listening == 'right' and chica.location == 'hall_near'):
+            audio.sounds['breathing'].update_volume(100)
+        else:
+            audio.sounds['breathing'].update_volume(0)
+        if viewing_bed and freddy.progress >= 10:
+            audio.sounds['freddles'].update_volume(50)
+        elif freddy.progress >= 30:
+            audio.sounds['freddles'].update_volume(2)
+        elif freddy.progress >= 20:
+            audio.sounds['freddles'].update_volume(1)
+        else:
+            audio.sounds['freddles'].update_volume(0)
+        if chica.location == 'kitchen':
+            if listening == 'right':
+                audio.sounds['kitchen'].update_volume(100)
+            else:
+                audio.sounds['kitchen'].update_volume(40)
+        else:
+            audio.sounds['kitchen'].update_volume(0)
+        if random_sound == 1:
+            audio.sounds['random_laugh'].play()
+        elif random_sound == 2:
+            audio.sounds['random_breath'].play()
+        elif random_sound == 3:
+            audio.sounds['random_dog'].play()
+        random_sound = 0
+        if random_call == 1:
+            audio.sounds['random_call'].update_volume(60)
+        elif random_call == 2:
+            audio.sounds['random_call'].update_volume(30)
+        else:
+            audio.sounds['random_call'].update_volume(0)
+
+        window.fill((255, 255, 255))
 
         # we increment frames by 0.5 to get that 30 fps animation FNaF 4 seems to have, so floor all the frame values
         if disable_jumpscares and screen.jumpscare:
@@ -762,24 +901,22 @@ if __name__ == '__main__':
         if draw_hitboxes:
             hitbox_surface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
             hitbox_surface.set_alpha(hitbox_alpha)
-            pygame.draw.rect(hitbox_surface, (255, 0, 255), slow_left_rect)
-            pygame.draw.rect(hitbox_surface, (100, 50, 255), fast_left_rect)
-            pygame.draw.rect(hitbox_surface, (255, 0, 255), slow_right_rect)
-            pygame.draw.rect(hitbox_surface, (100, 50, 255), fast_right_rect)
-            pygame.draw.rect(hitbox_surface, (255, 0, 0), left_door_rect)
-            pygame.draw.rect(hitbox_surface, (255, 0, 0), right_door_rect)
-            pygame.draw.rect(hitbox_surface, (255, 0, 0), run_back_rect)
-            pygame.draw.rect(hitbox_surface, (255, 0, 0), debounce_rect)
-            pygame.draw.rect(hitbox_surface, (255, 0, 0), closet_rect)
+            for h in hitboxes:
+                pygame.draw.rect(hitbox_surface, hitboxes[h].colour, hitboxes[h].rect)
             window.blit(hitbox_surface, (0, 0))
 
         pygame.display.flip()
         dt = clock.tick(60)
 
-    while True:
+    for i in audio.sounds:
+        audio.sounds[i].channel.stop()
+
+    while game_over:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
+                    game_over = False
             elif event.type == pygame.QUIT:
-                pygame.quit()
+                game_over = False
+
+    pygame.quit()

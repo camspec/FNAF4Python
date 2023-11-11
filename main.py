@@ -476,7 +476,7 @@ if __name__ == '__main__':
                 screen = images.screens['leave_left_door']
                 animation_frame = 0
             else:
-                if animation_frame == 1:
+                if animation_frame == 1 and retreating == '':
                     audio.sounds['flashlight'].play()
                 # closing door animation does not count as listening
                 listening = 'left'
@@ -533,7 +533,7 @@ if __name__ == '__main__':
                 screen = images.screens['leave_right_door']
                 animation_frame = 0
             else:
-                if animation_frame == 1:
+                if animation_frame == 1 and retreating == '':
                     audio.sounds['flashlight'].play()
                 # closing door animation does not count as listening
                 listening = 'right'
@@ -625,7 +625,7 @@ if __name__ == '__main__':
                         animation_frame = 15
                 viewing_bed = True
             else:
-                if animation_frame != 19:
+                if animation_frame != 19 and not hitboxes['run_back'].rect.collidepoint(pygame.mouse.get_pos()):
                     audio.sounds['flashlight'].play()
                 viewing_bed = False
                 random_bed_view = random.randint(1, 100)
@@ -898,6 +898,7 @@ if __name__ == '__main__':
                 draw_text(f'Door shut: {door_shut}', 0, 16)
                 draw_text(f'Seconds looking at bed: {seconds_looking_at_bed}', 0, 17)
                 draw_text(f'Debounce: {run_back_debounce}', 0, 18)
+                draw_text(f'Retreating: {retreating}', 0, 19)
         if draw_hitboxes:
             hitbox_surface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
             hitbox_surface.set_alpha(hitbox_alpha)
